@@ -22,7 +22,9 @@ export interface Transcript {
   content?: string[] | undefined;
 }
 
-const STREAM: string = "https://broadcastify.cdnstream1.com/3831";
+// const STREAM: string = "https://broadcastify.cdnstream1.com/3831"; // Charleston
+const STREAM: string = "https://broadcastify.cdnstream1.com/1814"; // Champaign
+
 const CHUNK_SECONDS: number = 1;
 export const MAX_MODEL: "tiny" | "medium" | "large" = "large";
 
