@@ -1,6 +1,6 @@
-import { type SilenceLog } from ".";
+import { MAX_MODEL, type SilenceLog, type Transcript } from ".";
 import { rmSync } from "fs";
-import { execSync } from "child_process";
+import { spawn } from "child_process";
 
 export const parseInterval = (data: any): SilenceLog | null => {
   const silence = data
@@ -42,9 +42,35 @@ export const concatAudio = (from: number, to: number, index: string) => {
     .map((i) => String(i).padStart(3, "0"))
     // Append the file path for ease
     .map((i) => `out/tmp/${i}.mp3`);
-  execSync(
-    `ffmpeg -hide_banner -loglevel panic -i "concat:${files.join(
-      "|"
-    )}" out/speech/${index}.mp3`
-  );
+
+  spawn("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "panic",
+    "-i",
+    `concat:${files.join("|")}`,
+    `out/speech/${index}.mp3`,
+  ]);
+};
+
+export const transcribe = (transcript: Transcript, index: string) => {
+  const MODEL = transcript.last - transcript.first < 10 ? MAX_MODEL : "tiny";
+  const t = spawn("whisper", [
+    `out/speech/${index}.mp3`,
+    "--language",
+    "English",
+    "--model",
+    MODEL,
+    "--fp16",
+    "False",
+    "--language",
+    "English",
+    "--output_dir",
+    "out/transcripts",
+    "--output_format",
+    "json",
+  ]);
+  t.stdout.on("data", (data: any) => {
+    console.log(data.toString());
+  });
 };

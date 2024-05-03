@@ -3,6 +3,7 @@
 To install dependencies:
 
 ```bash
+pip3 install -U openai-whisper
 bun install
 ```
 

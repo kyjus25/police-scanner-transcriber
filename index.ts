@@ -1,7 +1,12 @@
 import { spawnSync } from "bun";
 import { spawn, exec } from "child_process";
 import { rmSync, mkdirSync } from "fs";
-import { concatAudio, deleteDownward, parseInterval } from "./helpers";
+import {
+  concatAudio,
+  deleteDownward,
+  parseInterval,
+  transcribe,
+} from "./helpers";
 
 export interface SilenceLog {
   start?: number;
@@ -11,24 +16,19 @@ export interface SilenceLog {
 export interface Transcript {
   start: number;
   end: number;
+  first: number;
+  last: number;
   content?: string;
 }
 
 const STREAM: string = "https://broadcastify.cdnstream1.com/3831";
 const CHUNK_SECONDS: number = 1;
+export const MAX_MODEL: "tiny" | "medium" | "large" = "large";
 
 rmSync("out", { force: true, recursive: true });
 mkdirSync("out/tmp", { recursive: true });
 mkdirSync("out/speech", { recursive: true });
-
-// Command to split the stream based on silence
-const splitStreamCommand = (
-  inputFile: string,
-  outputFile: string,
-  start: number,
-  duration: number
-) => `
-  ffmpeg -i ${inputFile} -ss ${start} -t ${duration} -acodec copy ${outputFile}`;
+mkdirSync("out/transcripts", { recursive: true });
 
 const detectSilence = spawn("ffmpeg", [
   "-i",
@@ -56,7 +56,6 @@ detectSilence.stderr.on("data", (data: any) => {
   if (!silence) return;
   // Push log onto queue for records
   queue.push(silence);
-  //   console.log("SILENCE", silenceIntervals);
 });
 
 const checkQueue = async () => {
@@ -90,9 +89,16 @@ const checkQueue = async () => {
       transcript.push({
         start: silence.end as number,
         end: next.start as number,
+        first: firstFile,
+        last: lastFile,
       });
 
-      console.log(transcript);
+      transcribe(
+        transcript[transcript.length - 1],
+        String(transcript.length - 1).padStart(3, "0")
+      );
+
+      // console.log(transcript);
 
       queue.shift();
     }
