@@ -22,8 +22,8 @@ export interface Transcript {
   content?: string[] | undefined;
 }
 
-// const STREAM: string = "https://broadcastify.cdnstream1.com/3831"; // Charleston
-const STREAM: string = "https://broadcastify.cdnstream1.com/1814"; // Champaign
+const STREAM: string = "https://broadcastify.cdnstream1.com/3831"; // Charleston
+// const STREAM: string = "https://broadcastify.cdnstream1.com/1814"; // Champaign
 
 const CHUNK_SECONDS: number = 1;
 export const MAX_MODEL: "tiny" | "medium" | "large" = "large";
@@ -37,7 +37,7 @@ const detectSilence = spawn("ffmpeg", [
   "-i",
   STREAM,
   "-af",
-  "silencedetect=noise=-30dB:d=1.0",
+  "silencedetect=noise=-40dB:d=1.0",
   "-f",
   "segment",
   "-segment_time",
