@@ -4,6 +4,7 @@ To install dependencies:
 
 ```bash
 pip3 install -U openai-whisper
+brew install mplayer
 bun install
 ```
 

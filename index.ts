@@ -1,6 +1,6 @@
-import { spawnSync } from "bun";
-import { spawn, exec } from "child_process";
+import { spawn } from "child_process";
 import { rmSync, mkdirSync } from "fs";
+
 import {
   concatAudio,
   deleteDownward,
@@ -14,11 +14,12 @@ export interface SilenceLog {
 }
 
 export interface Transcript {
+  status: "waiting" | "pending" | "transcribed" | "logged";
   start: number;
   end: number;
   first: number;
   last: number;
-  content?: string;
+  content?: string[] | undefined;
 }
 
 const STREAM: string = "https://broadcastify.cdnstream1.com/3831";
@@ -45,13 +46,15 @@ const detectSilence = spawn("ffmpeg", [
 ]);
 
 // Initialize assuming someone is talking
-let transcript: Transcript[] = [];
+let transcripts: Transcript[] = [];
+let currLog: number = 0;
 const queue: SilenceLog[] = [{ end: 0 }];
 
 detectSilence.stderr.on("data", (data: any) => {
   const silence: SilenceLog | null = parseInterval(data);
   // Check queue every out
   checkQueue();
+  checkLog();
   // Nothing captured in this output
   if (!silence) return;
   // Push log onto queue for records
@@ -76,29 +79,21 @@ const checkQueue = async () => {
       let lastFile: number = Math.ceil(next.start as number) / CHUNK_SECONDS;
       lastFile = Math.ceil(lastFile) - 1;
 
-      console.log("Talking captured from", firstFile, "to", lastFile);
-
       // Concat audio into speech files
       concatAudio(
         firstFile,
         lastFile,
-        String(transcript.length).padStart(3, "0")
+        String(transcripts.length).padStart(3, "0")
       );
 
       // Push transcript log into main array
-      transcript.push({
+      transcripts.push({
+        status: "waiting",
         start: silence.end as number,
         end: next.start as number,
         first: firstFile,
         last: lastFile,
       });
-
-      transcribe(
-        transcript[transcript.length - 1],
-        String(transcript.length - 1).padStart(3, "0")
-      );
-
-      // console.log(transcript);
 
       queue.shift();
     }
@@ -112,4 +107,32 @@ const checkQueue = async () => {
     queue.shift();
   }
   // Do nothing until we have more to go on
+};
+
+const checkLog = async () => {
+  const transcript = transcripts[currLog];
+
+  const index = String(currLog).padStart(3, "0");
+  if (transcript && transcript.status === "waiting") {
+    transcribe(transcript, index);
+  }
+
+  if (transcript && transcript.content && transcript.status === "transcribed") {
+    console.log(
+      "# Audio detected on files",
+      transcript.first,
+      "to",
+      transcript.last,
+      "(" + index + ")",
+      "[" + transcript.start + " - " + transcript.end + "]"
+    );
+    transcript.content.forEach((i) => console.log(`- ${i}`));
+    console.log("");
+    if (transcript.first !== 0) {
+      spawn("mplayer", [`out/speech/${index}.mp3`]);
+    }
+    transcript.status = "logged";
+    currLog++;
+  }
+  // console.log(transcripts);
 };

@@ -2,6 +2,8 @@ import { MAX_MODEL, type SilenceLog, type Transcript } from ".";
 import { rmSync } from "fs";
 import { spawn } from "child_process";
 
+console.clear();
+
 export const parseInterval = (data: any): SilenceLog | null => {
   const silence = data
     .toString()
@@ -54,7 +56,21 @@ export const concatAudio = (from: number, to: number, index: string) => {
 };
 
 export const transcribe = (transcript: Transcript, index: string) => {
-  const MODEL = transcript.last - transcript.first < 10 ? MAX_MODEL : "tiny";
+  // const MODEL = transcript.last - transcript.first < 10 ? MAX_MODEL : "tiny";
+  const MODEL = MAX_MODEL;
+
+  if (transcript.status !== "waiting") {
+    console.log("Huh?");
+    return;
+  }
+  transcript.status = "pending";
+
+  if (transcript.first === 0) {
+    transcript.content = ["<Advertisement>"];
+    transcript.status = "transcribed";
+    return;
+  }
+
   const t = spawn("whisper", [
     `out/speech/${index}.mp3`,
     "--language",
@@ -70,7 +86,17 @@ export const transcribe = (transcript: Transcript, index: string) => {
     "--output_format",
     "json",
   ]);
-  t.stdout.on("data", (data: any) => {
-    console.log(data.toString());
+  t.stdout.on("data", async () => {
+    try {
+      const file = await Bun.file(`out/transcripts/${index}.json`).json();
+      transcript.content = file.segments.map((i: any) => i.text.trim());
+    } catch (e) {
+      transcript.content = [];
+    }
+    transcript.status = "transcribed";
+  });
+  t.stderr.on("data", async () => {
+    transcript.content = [];
+    transcript.status = "transcribed";
   });
 };
