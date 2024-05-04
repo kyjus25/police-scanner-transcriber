@@ -59,10 +59,7 @@ export const transcribe = (transcript: Transcript, index: string) => {
   // const MODEL = transcript.last - transcript.first < 10 ? MAX_MODEL : "tiny";
   const MODEL = MAX_MODEL;
 
-  if (transcript.status !== "waiting") {
-    console.log("Huh?");
-    return;
-  }
+  if (transcript.status !== "waiting") return;
   transcript.status = "pending";
 
   if (transcript.first === 0) {
@@ -90,6 +87,10 @@ export const transcribe = (transcript: Transcript, index: string) => {
     try {
       const file = await Bun.file(`out/transcripts/${index}.json`).json();
       transcript.content = file.segments.map((i: any) => i.text.trim());
+      rmSync(`out/transcripts/${index}.json`, {
+        force: true,
+        recursive: true,
+      });
     } catch (e) {
       transcript.content = [];
     }

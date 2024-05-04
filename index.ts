@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import { rmSync, mkdirSync } from "fs";
+import dayjs from 'dayjs/esm';
 
 import {
   concatAudio,
@@ -27,6 +28,8 @@ const STREAM: string = "https://broadcastify.cdnstream1.com/3831"; // Charleston
 
 const CHUNK_SECONDS: number = 1;
 export const MAX_MODEL: "tiny" | "medium" | "large" = "large";
+const START_TIME = dayjs();
+const SILENT_MODE: boolean = !!process.argv.find(i => i === '--silent');
 
 rmSync("out", { force: true, recursive: true });
 mkdirSync("out/tmp", { recursive: true });
@@ -126,15 +129,42 @@ const checkLog = async () => {
       "to",
       transcript.last,
       "(" + index + ")",
-      "[" + transcript.start + " - " + transcript.end + "]"
+      "[" + START_TIME.add(transcript.start, 'seconds').format('M/D/YY h:m:sA') + "]"
     );
     transcript.content.forEach((i) => console.log(`- ${i}`));
     console.log("");
-    if (transcript.first !== 0) {
+    if (transcript.first !== 0 && !SILENT_MODE) {
       spawn("mplayer", [`out/speech/${index}.mp3`]);
     }
     transcript.status = "logged";
     currLog++;
   }
-  // console.log(transcripts);
 };
+
+const server = Bun.serve({
+  port: 3000,
+  fetch(req) {
+    if (new URL(req.url).pathname.indexOf('.mp3') !== -1) {
+      const filePath = 'out/speech' + new URL(req.url).pathname;
+      const file = Bun.file(filePath);
+      return new Response(file);
+    }
+    return new Response(JSON.stringify(transcripts.map((i, index) => ({
+      status: i.status,
+      start: {
+        timestampSeconds: i.start,
+        readable: START_TIME.add(i.start, 'seconds').format('M/D/YY h:m:sA'),
+        epochMS: START_TIME.add(i.start, 'seconds').valueOf(),
+      },
+      end: {
+        timestampSeconds: i.end,
+        readable: START_TIME.add(i.end, 'seconds').format('M/D/YY h:m:sA'),
+        epochMS: START_TIME.add(i.end, 'seconds').valueOf(),
+      },
+      content: i.content,
+      audio: `${req.headers.get('host')}/${String(index).padStart(3, "0")}.mp3`
+    }))));
+  },
+});
+console.log(`Webserver listening on ${server.url}`);
+console.log('')
