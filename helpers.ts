@@ -83,7 +83,7 @@ export const transcribe = (transcript: Transcript, index: string) => {
     "--output_format",
     "json",
   ]);
-  t.stdout.on("data", async () => {
+  t.on("exit", async () => {
     try {
       const file = await Bun.file(`out/transcripts/${index}.json`).json();
       transcript.content = file.segments.map((i: any) => i.text.trim());
@@ -94,10 +94,6 @@ export const transcribe = (transcript: Transcript, index: string) => {
     } catch (e) {
       transcript.content = [];
     }
-    transcript.status = "transcribed";
-  });
-  t.stderr.on("data", async () => {
-    transcript.content = [];
     transcript.status = "transcribed";
   });
 };
