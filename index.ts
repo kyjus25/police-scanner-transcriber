@@ -134,7 +134,7 @@ const checkLog = async () => {
     transcript.content.forEach((i) => console.log(`- ${i}`));
     console.log("");
     if (transcript.first !== 0 && !SILENT_MODE) {
-      spawn("mplayer", [`out/speech/${index}.mp3`]);
+      spawn("mplayer", [`out/speech/${index}.wav`]);
     }
     transcript.status = "logged";
     currLog++;
@@ -144,7 +144,7 @@ const checkLog = async () => {
 const server = Bun.serve({
   port: 3000,
   fetch(req) {
-    if (new URL(req.url).pathname.indexOf('.mp3') !== -1) {
+    if (new URL(req.url).pathname.indexOf('.wav') !== -1) {
       const filePath = 'out/speech' + new URL(req.url).pathname;
       const file = Bun.file(filePath);
       return new Response(file);
@@ -162,7 +162,7 @@ const server = Bun.serve({
         epochMS: START_TIME.add(i.end, 'seconds').valueOf(),
       },
       content: i.content,
-      audio: `${req.headers.get('host')}/${String(index).padStart(3, "0")}.mp3`
+      audio: `${req.headers.get('host')}/${String(index).padStart(3, "0")}.wav`
     }))));
   },
 });

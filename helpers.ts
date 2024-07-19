@@ -51,7 +51,11 @@ export const concatAudio = (from: number, to: number, index: string) => {
     "panic",
     "-i",
     `concat:${files.join("|")}`,
-    `out/speech/${index}.mp3`,
+    "-acodec",
+    "pcm_s16le",    // Audio codec for 16-bit PCM
+    "-ar",
+    "16000",
+    `out/speech/${index}.wav`,  // Change output file extension to .wav
   ]);
 };
 
@@ -68,32 +72,29 @@ export const transcribe = (transcript: Transcript, index: string) => {
     return;
   }
 
-  const t = spawn("whisper", [
-    `out/speech/${index}.mp3`,
-    "--language",
-    "English",
-    "--model",
-    MODEL,
-    "--fp16",
-    "False",
-    "--language",
-    "English",
-    "--output_dir",
-    "out/transcripts",
-    "--output_format",
-    "json",
-  ]);
-  t.on("exit", async () => {
-    try {
-      const file = await Bun.file(`out/transcripts/${index}.json`).json();
-      transcript.content = file.segments.map((i: any) => i.text.trim());
-      rmSync(`out/transcripts/${index}.json`, {
-        force: true,
-        recursive: true,
-      });
-    } catch (e) {
-      transcript.content = [];
-    }
-    transcript.status = "transcribed";
-  });
+  setTimeout(() => {
+    const ls = spawn('.whisper/main', [
+      '-m',
+      '.whisper/models/ggml-large-v3.bin',
+      '-f',
+      `out/speech/${index}.wav`,
+      '-of',
+      `out/transcripts/${index}`,
+      '-oj'
+    ]);
+    
+    ls.on('close', async (code) => {
+      try {
+        const file = await Bun.file(`out/transcripts/${index}.json`).json();
+        transcript.content = file.transcription.map((i: any) => i.text.trim());
+        rmSync(`out/transcripts/${index}.json`, {
+          force: true,
+          recursive: true,
+        });
+      } catch (e) {
+        transcript.content = [];
+      }
+      transcript.status = "transcribed";
+    }); 
+  }, 1000)
 };
