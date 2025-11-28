@@ -5,10 +5,8 @@ import {
   createRootRouteWithContext,
 } from "@tanstack/solid-router";
 import { TanStackDevtools } from "@tanstack/solid-devtools";
-
 import { HydrationScript } from "solid-js/web";
 import { lazy, Suspense } from "solid-js";
-
 import styleCss from "../styles.css?url";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
